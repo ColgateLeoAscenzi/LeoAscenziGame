@@ -724,13 +724,13 @@ public class LeoAscenziGame {
 			// You should always know what you are doing (your current small goal) 
 			// before implementing that piece or talk to us. 
 			
-			System.out.println("Running the demo: DEMO=" + DEMO);
+			//System.out.println("Running the demo: DEMO=" + DEMO);
 			//constructor for client to adjust the game window size 
 			//TRY different values
-			DemoGame game = new DemoGame(5, 10, 0);
+			//DemoGame game = new DemoGame(5, 10, 0);
 			//default constructor   (4 by 10)
 			// DemoGame game = new DemoGame();
-			game.play();
+			//game.play();
 			
 		} else {
 			System.out.println("Running student game: DEMO=" + DEMO);
