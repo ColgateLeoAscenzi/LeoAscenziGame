@@ -8,6 +8,11 @@ import java.io.IOException;
 import java.io.File;
 import java.io.FileNotFoundException;
 
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
+
 public class Launcher extends JFrame{
 	//Must be static in order to be called inside the listener
 	
@@ -148,11 +153,36 @@ public class Launcher extends JFrame{
 			
 			//Loads all the files that start with save
 			File[] files = new File(System.getProperty("user.dir")).listFiles();
+			int count = 1;
+			DateFormat saveDateStructure = new SimpleDateFormat("MMddyyHHmmss");
+			DateFormat desiredStructure = new SimpleDateFormat("MM/dd/yy HH:mm:ss");
+			
 			for(File file: files){
 				if(file.getName().substring(0,4).equals("save")){
-						JButton tempButton = new JButton(file.getName());
+						
+						//Takes the file name, finds just the date, makes a new date object, then converts it to a readable form
+						String tempName = file.getName();
+						String timeString = tempName.substring(4,tempName.length()-4);
+						Date saveDate = new Date();
+						try{
+							saveDate = saveDateStructure.parse(timeString);
+						}
+						catch(ParseException pe){
+							System.out.println("Error in reading the file name!");
+						}
+						
+						String newDateString = desiredStructure.format(saveDate);
+						
+						JLabel tempLabel = new JLabel("Saved on: "+newDateString);
+						JButton tempButton = new JButton("Save Game " + count);
+						
+						tempButton.setName(tempName);
 						tempButton.addActionListener(buttonText);
+						
 						loadRight.add(tempButton);
+						loadRight.add(tempLabel);
+						
+						count++;
 				}
 			}
 			
@@ -165,7 +195,7 @@ public class Launcher extends JFrame{
 			
 			//Casts the source of the event to a button, then gets its text
 			if(e.getSource() instanceof JButton){
-				currentSave = ((JButton) (e.getSource())).getText();
+				currentSave = ((JButton) (e.getSource())).getName();
 			}
 			else{
 				System.out.println("Somehow, something other than a button called this method...");
