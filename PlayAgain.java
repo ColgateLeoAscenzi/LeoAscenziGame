@@ -13,15 +13,23 @@ public class PlayAgain extends JFrame{
 	private static JFrame mainFrame;
 	
 	private static JPanel main;
+	private static JPanel scorePanel;
+	private static JPanel buttonPanel;
 	
 	private static JButton playAgainButton;
 	private static JButton quitButton;
 	
+	private static JLabel scoreLabel;
+	
+	private static int lastScore;
+	
 	public static void main(String[] args){
-		PlayAgain launch = new PlayAgain();
+		PlayAgain launch = new PlayAgain(Integer.parseInt(args[0]));
 	}
 	
-	public PlayAgain(){
+	public PlayAgain(int score){
+		
+		lastScore = score;
 		//Sets up the play again launcher
 		mainFrame = new JFrame("Play Again");
 		mainFrame.setVisible(true);
@@ -29,11 +37,20 @@ public class PlayAgain extends JFrame{
 		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		main = new JPanel();
+		scorePanel = new JPanel();
+		buttonPanel = new JPanel();
 
 		
 		//Adds the panel to the main
 		mainFrame.add(main);
 		
+		main.setLayout(new BoxLayout(main, BoxLayout.Y_AXIS));
+		
+		main.add(scorePanel);
+		main.add(buttonPanel);
+		
+		scoreLabel = new JLabel("Previous Score: "+lastScore);
+		scorePanel.add(scoreLabel);
 		
 		//Creates the buttons
 		playAgainButton = new JButton("Play Again?");

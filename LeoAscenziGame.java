@@ -54,6 +54,10 @@ public class LeoAscenziGame {
 	//NPC IMAGES
 	private final String AVOID_IMG = "avoid.gif";
 	private final String GET_IMG = "get.gif";
+	
+	//Spalsh images
+	private final String WIN_IMG = "win.png";
+	private final String LOSE_IMG = "lose.png";
 
 	
 	private int MODE = 1;
@@ -282,11 +286,24 @@ public class LeoAscenziGame {
 				msElapsed += pauseTime;
 			}
 		}
+		//Pause to let player see their winning move
+		this.grid.pause(1500);
+		
+		//Display the winscreen
+		if(lives == 0){
+			this.grid.setSplash(LOSE_IMG);
+		}
+		else{
+			this.grid.setSplash(WIN_IMG);
+		}
+		
+		//Pause to let player see how well they did
+		this.grid.pause(5000);
 		this.grid.frame.dispose();
 		try{
 			Runtime rt = Runtime.getRuntime();
 			Process p = rt.exec("javac *.java");
-			Process p1 = rt.exec("java PlayAgain");
+			Process p1 = rt.exec("java PlayAgain "+score);
 			
 		}
 		catch(IOException IOe){

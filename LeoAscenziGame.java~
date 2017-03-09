@@ -17,6 +17,11 @@ import java.util.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 
+//for launching play again
+import java.lang.Runtime;
+import java.lang.Process;
+import java.io.IOException;
+
 public class LeoAscenziGame {
 	
 	// set DEMO to false to use your code (true uses DemoGame.class)
@@ -277,6 +282,16 @@ public class LeoAscenziGame {
 				msElapsed += pauseTime;
 			}
 		}
+		this.grid.frame.dispose();
+		try{
+			Runtime rt = Runtime.getRuntime();
+			Process p = rt.exec("javac *.java");
+			Process p1 = rt.exec("java PlayAgain");
+			
+		}
+		catch(IOException IOe){
+			System.err.println("Error loading play again!");
+		}
 	}
 
 	public void handleMouseClick() {
@@ -292,7 +307,6 @@ public class LeoAscenziGame {
 				grid.setColor(loc,null);
 			}
 		}
-
 	
 	}
 
