@@ -1,0 +1,742 @@
+import java.awt.event.KeyEvent;
+import java.util.Random;
+
+//For colors and stuff
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.*;
+
+//For saving (needs to write to file and name it based on time)
+import java.io.PrintWriter;
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+//for loading
+import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+
+//for launching play again
+import java.lang.Runtime;
+import java.lang.Process;
+import java.io.IOException;
+
+public class LeoAscenziGame {
+	
+	// set DEMO to false to use your code (true uses DemoGame.class)
+	private static final boolean DEMO = false;           
+	
+	// Game window should be wider than tall:  H_DIM < W_DIM   
+	// (more effectively using space)
+	// # of cells vertically by default: height of game
+	private static final int H_DIM = 5; 
+	// # of cells horizontally by default: width of game
+	private static final int W_DIM = 10;  
+	// default location of the user at the start of the game
+	private static final int U_ROW = 0;
+	
+	private static final int FACTOR = 3;      // you might change that this
+	                           // setting or declaration when working on timing
+	                           // (speed up and down the game)
+	                           
+	
+	//PLAYER IMAGES
+	//Full hp
+	private final String USER_IMG = "user.gif"; 
+	//2 lives
+	private final String USER_IMG1 = "userhurt.gif";
+	//1 life
+	private final String USER_IMG2 = "usercritical.gif";
+	//dead
+	private final String USER_IMG3 = "userdead.gif";
+	
+	//NPC IMAGES
+	private final String AVOID_IMG = "avoid.gif";
+	private final String GET_IMG = "get.gif";
+
+	
+	private int MODE = 1;
+	
+	
+	//Sounds
+	private final String[] COLLIDE = new String[]{"collide1.wav","collide2.wav","collide3.wav"};
+	
+	
+	
+	
+	//Needed to tell if the splash image is on
+	private boolean isSplash;
+	
+	//tell if the game is paused
+	private boolean isPaused;
+	
+	private boolean isGrid;
+	                        
+	private static Random rand = new Random();  //USE ME 
+	                                          // don't instantiate me every frame
+	                                          
+	private static Scanner saver;
+	                                          
+	//To play sounds
+	private static SoundPlayer radio = new SoundPlayer();
+	
+	private GameGrid grid; // graphical window to display the game (the VIEW)
+	                       // a 2D game made of two dimensional array of Cells
+	                       
+	//private SaveGrid saveGrid;
+	
+	//Number of screenshots
+	private int numScreenshots;
+	
+	
+	private int userRow;
+	
+	private long msElapsed;		// game clock: number of ms since start of
+	                          // game main loop---see play() method
+	                          
+	private int timerClicks;	// used to space animation and key presses
+	private int pauseTime;		// to control speed of game
+	
+	public int lives;
+	public int score;
+
+	
+	public LeoAscenziGame() {
+		this(H_DIM, W_DIM, U_ROW);
+	}
+	
+	public LeoAscenziGame(int hdim, int wdim, int urow) {
+		
+		init(hdim, wdim, urow);
+	}
+	
+	//Constructs from a save file
+	public LeoAscenziGame(String filename){
+		
+		//Booleans
+		isGrid = false;
+		isPaused = false;
+		
+		//Sets screenshot number
+		numScreenshots = 0;
+		
+		
+		
+		
+		try{
+		File saveFile = new File(filename);
+		saver = new Scanner(saveFile);
+		}
+		catch(FileNotFoundException e){
+			System.err.println("File was not found for loading!");
+		}
+		
+
+		String[] widthheight = saver.nextLine().split("x");
+		grid = new GameGrid(Integer.parseInt(widthheight[1]), Integer.parseInt(widthheight[0]));
+
+		for(int i = 0; i < grid.getNumRows(); i++){
+			
+			//Gets the next row
+			String temprow = saver.nextLine();
+			for(int j = 0; j < grid.getNumCols(); j++){
+				Location currentLoc = new Location(i,j);
+				if(temprow.charAt(j) == 'A'){
+					System.out.println("A");
+					grid.setCellImage(currentLoc, AVOID_IMG);
+				}
+				else if(temprow.charAt(j) == 'G'){
+					grid.setCellImage(currentLoc, GET_IMG);
+				}
+				else if(temprow.charAt(j) == 'U'){
+					grid.setCellImage(currentLoc, USER_IMG);
+				}
+				else if(temprow.charAt(j) == 'V'){
+					grid.setCellImage(currentLoc, USER_IMG1);
+				}
+				else if(temprow.charAt(j) == 'Y'){
+					grid.setCellImage(currentLoc, USER_IMG2);
+				}
+				else if(temprow.charAt(j) == '#'){
+					grid.setCellImage(currentLoc, null);
+				}
+			}
+			
+		}
+		//Lives
+		lives = Integer.parseInt(saver.nextLine());
+		
+		//Score
+		score = Integer.parseInt(saver.nextLine());
+		
+		//timerClicks
+		timerClicks = Integer.parseInt(saver.nextLine());
+		
+		//msElapsed
+		msElapsed = Integer.parseInt(saver.nextLine());
+		
+		//pauseTime
+		pauseTime = Integer.parseInt(saver.nextLine());
+		
+		//difficulty
+		MODE = Integer.parseInt(saver.nextLine());
+		
+		saver.close();
+		//Updates the title
+		updateTitle();
+		
+		
+		
+	}
+	
+	
+	private void init(int hdim, int wdim, int urow) {  
+		
+		/* initialize the game window
+
+				NOTE: look at the various constructors to see what you can do!
+				For example:
+					grid = new GameGrid(hdim, wdim, Color.MAGENTA);
+					
+				You need to use the one that takes an image to implement the 
+				splashscreen functionality (don't start there, but do it as your
+				first extension)
+		*/
+		//Set up the game grid
+		grid = new GameGrid(hdim, wdim);  
+		
+		//Set up the save grid
+		//saveGrid = new SaveGrid(hdim*2,wdim);
+		
+		//Make the splash image true
+	
+		/* initialize other aspects of game state */
+
+		// animation settings 
+		timerClicks = 0;
+		msElapsed = 0;
+		pauseTime = 100;
+
+		// store and initialize user position
+		userRow = urow;
+		grid.setCellImage(new Location(userRow, (int) (wdim/2)), USER_IMG);
+		
+		//Number of lives
+		if(MODE == 1){
+			lives = 3;
+		}
+		else if(MODE == 2){
+			lives = 3;
+		}
+		else if(MODE == 3){
+			lives = 1;
+		}
+		else if(MODE == 4){
+			lives = 1;                             
+		}
+		
+		//Sets score
+		score = 0;
+		
+		//Booleans
+		isGrid = false;
+		
+		//Sets screenshot number
+		numScreenshots = 0;
+		
+		
+		//Updates the title
+		updateTitle();
+		
+	}	
+	
+	public void play() {
+		
+
+		
+		while (!isGameOver()) {
+		
+			grid.pause(pauseTime); 	 // pause for some time (smooth animation)
+			if(!isPaused){
+				msElapsed += pauseTime;	 // count the total amount of time elapsed
+				timerClicks++;				 // increment the timer count
+			}
+		
+			handleKeyPress();        // update state based on user key press
+			
+			handleMouseClick();      // when the game is running: 
+			                         // click & read the console output 
+			
+			if(!isPaused){   	
+				if (timerClicks % FACTOR == 0) {  // if it's the FACTOR timer tick
+					
+					//Code shouldn't move when paused
+										
+					scrollDown();
+					populateTopEdge();
+				}
+			}
+			if(!isPaused){
+				updateTitle();
+				msElapsed += pauseTime;
+			}
+		}
+		this.grid.frame.dispose();
+		try{
+			Runtime rt = Runtime.getRuntime();
+			Process p = rt.exec("javac *.java");
+			Process p1 = rt.exec("java PlayAgain");
+			
+		}
+		catch(IOException IOe){
+			System.err.println("Error loading play again!");
+		}
+	}
+
+	public void handleMouseClick() {
+		
+		Location loc = grid.checkLastLocationClicked();
+		
+		if (loc != null){
+			System.out.println("You clicked on a square " + loc);
+			if(grid.getColor(loc) == null){
+				grid.setColor(loc, new Color(50,50,50));
+			}
+			else{
+				grid.setColor(loc,null);
+			}
+		}
+	
+	}
+
+	
+	public void handleKeyPress() {
+			
+		int key = grid.checkLastKeyPressed();
+		
+		//use Java constant names for key presses
+		//http://docs.oracle.com/javase/7/docs/api/constant-values.html#java.awt.event.KeyEvent.VK_DOWN
+		if(!isPaused){	
+			// Q for quit
+			if (key == KeyEvent.VK_Q)
+				System.exit(0);
+			
+			//Saves multiple screenshots
+			else if (key == KeyEvent.VK_S){
+				grid.save("screenshot"+numScreenshots+".png");
+				numScreenshots++;
+			}
+			else if(key == KeyEvent.VK_P){
+				if(isPaused)
+					isPaused = false;
+				else
+					isPaused = true;
+			}
+			else if(key == KeyEvent.VK_D){
+				if(!isGrid){
+					//Yellow
+					grid.setLineColor(new Color(250,10,250));
+					isGrid = true;
+				}
+				else{
+					//Black
+					grid.setLineColor(new Color(0,0,0));
+					isGrid = false;
+				}
+			}
+			/* To help you with step 9: 
+			   use the 'T' key to help you with implementing speed up/slow down/pause
+			   this prints out a debugging message */
+			else if (key == KeyEvent.VK_T)  {
+				boolean interval =  (timerClicks % FACTOR == 0);
+				System.out.println("pauseTime " + pauseTime + " msElapsed reset " + 
+					msElapsed + " interval " + interval);
+			}
+			else if(key == KeyEvent.VK_RIGHT){
+				//Increases lag time to match left
+				int j = this.grid.getNumRows()-1;
+				for(int i = this.grid.getNumCols()-1; i > -1;i--){
+					//Sets temporary current location
+					Location currentLoc = new Location(j,i);
+					Location nextLoc;
+					//Sets next location, if it's not on the right wall
+					if(i< this.grid.getNumCols()-1){
+						nextLoc = new Location(j,i+1);
+					}
+					else{
+						nextLoc = new Location(j,i);
+					}
+
+						//If the current location is a user, move him right
+						if(this.grid.getCellImage(currentLoc) == USER_IMG){
+							System.out.println("Moving right to: "+nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG);
+						}
+						else if(this.grid.getCellImage(currentLoc) == USER_IMG1){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG1);
+						}
+						else if(this.grid.getCellImage(currentLoc) == USER_IMG2){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG2);
+						}
+						else if(this.grid.getCellImage(currentLoc) == USER_IMG3){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG3);
+						}
+				
+				
+				}
+			}
+			else if(key == KeyEvent.VK_LEFT){
+				int j = this.grid.getNumRows()-1;
+				for(int i = 0; i < this.grid.getNumCols();i++){
+					//Sets temporary current location
+					
+					Location currentLoc = new Location(j,i);
+					Location nextLoc;
+					//Sets next location, if it's not on the left wall
+					if(i > 0){
+						nextLoc = new Location(j,i-1);
+					}
+					else{
+						nextLoc = new Location(j,i);
+					}
+					//If the current location is a user, move him right
+
+						if(this.grid.getCellImage(currentLoc) == USER_IMG){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG);
+						}
+						else if(this.grid.getCellImage(currentLoc) == USER_IMG1){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG1);
+						}
+						else if(this.grid.getCellImage(currentLoc) == USER_IMG2){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG2);
+						}
+						else if(this.grid.getCellImage(currentLoc) == USER_IMG3){
+							System.out.println("Moving left to: "+ nextLoc);
+							this.grid.setCellImage(currentLoc, null);
+							this.grid.setCellImage(nextLoc, USER_IMG3);
+						}
+					
+				
+				}
+			}
+
+		}
+		//Can only hit certain keys if paused
+		else{
+			if(key == KeyEvent.VK_P){
+				if(isPaused)
+					isPaused = false;
+				else
+					isPaused = true;
+			}
+			else if (key == KeyEvent.VK_Q)
+				System.exit(0);
+			
+			else if(key == KeyEvent.VK_D){
+				if(!isGrid){
+					//Yellow
+					grid.setLineColor(new Color(250,10,250));
+					isGrid = true;
+				}
+				else{
+					//Black
+					grid.setLineColor(new Color(0,0,0));
+					isGrid = false;
+				}
+			}
+			else if(key == KeyEvent.VK_T) {
+				boolean interval =  (timerClicks % FACTOR == 0);
+				System.out.println("pauseTime " + pauseTime + " msElapsed reset " + 
+					msElapsed + " interval " + interval);
+			}
+			else if(key == KeyEvent.VK_S){
+				grid.save("screenshot"+numScreenshots+".png");
+				numScreenshots++;
+			}
+			else if(key == KeyEvent.VK_R){
+				saveGame();
+			}
+			
+			//Slows down and speeds up time by changing the pause time
+			else if(key == KeyEvent.VK_MINUS){
+				pauseTime+=10;
+				System.out.println("Time slowed down. New pause time is: "+pauseTime+" ms.");
+			}
+			else if(key == KeyEvent.VK_EQUALS){
+				if(pauseTime == 10){
+					System.out.println("Cannot go any faster!");
+				}
+				else{
+					pauseTime-=10;
+					System.out.println("Time sped up. New pause time is: "+pauseTime+" ms.");
+				}
+			}
+		}
+		
+	}
+	
+	//Saves the game in a txt format
+	public void saveGame(){
+		//month, day, year, hour, minute, second
+		DateFormat df = new SimpleDateFormat("MMddyyHHmmss");
+		//Gets the date right now
+		Date dateobj = new Date();
+		
+		try{
+			PrintWriter writer = new PrintWriter("save"+df.format(dateobj)+".txt");
+			writer.println(grid.getNumCols()+"x"+grid.getNumRows());
+			for(int i = 0; i < grid.getNumRows();i++){
+				
+				String temprow = "";
+				for(int j = 0; j < grid.getNumCols(); j++){
+					Location currentLoc = new Location(i,j);
+					if(grid.getCellImage(currentLoc) == AVOID_IMG){
+						temprow+="A";
+					}
+					else if(grid.getCellImage(currentLoc) == GET_IMG){
+						temprow+="G";
+					}
+					else if(grid.getCellImage(currentLoc) == USER_IMG){
+						temprow+="U";
+					}
+					else if(grid.getCellImage(currentLoc) == USER_IMG1){
+						temprow+="V";
+					}
+					else if(grid.getCellImage(currentLoc) == USER_IMG2){
+						temprow+="Y";
+					}
+					//User image 3 not needed cause you're dead
+					else if(grid.getCellImage(currentLoc) == null){
+						temprow+="#";
+					}
+				}
+				writer.println(temprow);
+			}
+			
+			//Lives
+			writer.println(lives);
+			//Score
+			writer.println(score);
+			//timerClicks
+			writer.println(timerClicks);
+			//msElapsed
+			writer.println(msElapsed);
+			//pauseTime
+			writer.println(pauseTime);
+			
+			//difficulty
+			writer.println(MODE);
+			
+			writer.close();
+			
+			System.out.println("Game Saved!");
+		}
+		
+		catch(Exception e){
+			System.err.println("An error has occured while saving!");
+		}
+		
+		
+	}
+		
+	
+	
+	// update game state to reflect adding in new cells in the right-most column 
+	public void populateTopEdge() {
+		//Easy (Bomb every 3 frames, 1 good per frame)
+		int bombCount = 0;
+		int getCount = 0;
+		if(MODE == 1){
+			int maxBombsPerLine = 1;
+			int maxGetPerLine = 2;
+			for(int i = 0; i < this.grid.getNumCols(); i++){
+				for(int j = 0; j < this.grid.getNumCols(); j++){
+					if(this.grid.getCellImage(new Location(0,j)) == AVOID_IMG){
+						bombCount+=1;
+					}
+					else if(this.grid.getCellImage(new Location(0,j)) == GET_IMG){
+							getCount+=1;
+					}
+				}
+				int choice = rand.nextInt(26);
+				if(choice ==  3 || choice ==  6 || choice ==  9){
+					if(bombCount <= maxBombsPerLine){
+						this.grid.setCellImage(new Location(0,i), AVOID_IMG);
+						bombCount +=1;
+					}
+				}
+				else if(choice ==  2 || choice ==  4 || choice ==  8 || choice ==  12 || choice ==  14 || choice ==  18){
+					if(getCount<=maxGetPerLine){
+						this.grid.setCellImage(new Location(0,i), GET_IMG);
+						getCount++;
+					}
+				}
+			}
+		}
+		//Medium (Bomb every 2 frames, 2 good per 3 frames, good are dropped lose a life)
+		else if(MODE == 2){
+		}
+		//Hard (Bomb every 2 frames, 2 good per 3 frames, good are dropped lose game)
+		else if(MODE == 3){
+		}
+		//Basically impossible (1 good per frame, 3 bombs per frame, if bomb is hit or good is dropped lose game)
+		else if(MODE == 4){
+		}
+		else{
+			System.out.println("You shouldn't be here!");
+		}
+	}
+	
+	// updates the game state to reflect scrolling left by one column 
+	public void scrollDown() {
+		for(int i = 0; i < this.grid.getNumCols();i++){
+			for(int j = this.grid.getNumRows()-1; j > -1;j--){
+				Location currentLoc = new Location(j,i);
+				Location nextLoc = new Location(j+1,i);
+				
+				
+				if(j < this.grid.getNumRows()-1	){
+					
+					if(this.grid.getCellImage(currentLoc) == AVOID_IMG){
+						if(this.grid.getCellImage(nextLoc) == null){
+							this.grid.setCellImage(currentLoc,null);
+							this.grid.setCellImage(nextLoc, AVOID_IMG);
+						}
+						else{
+							handleCollision(currentLoc);
+						}
+					}
+					else if(this.grid.getCellImage(currentLoc) == GET_IMG){
+						if(this.grid.getCellImage(nextLoc) == null){
+							this.grid.setCellImage(currentLoc,null);
+							this.grid.setCellImage(nextLoc, GET_IMG);
+						}
+						else{
+							handleCollision(currentLoc);
+						}
+						
+					}
+				}
+				else{
+					if((this.grid.getCellImage(currentLoc) != USER_IMG) &&(this.grid.getCellImage(currentLoc) != USER_IMG1)&&(this.grid.getCellImage(currentLoc) != USER_IMG2)&&(this.grid.getCellImage(currentLoc) != USER_IMG3)){
+						this.grid.setCellImage(currentLoc,null);
+					}
+				}
+			}
+		}
+	}
+
+	
+	public void handleCollision(Location loc) {
+		if(this.grid.getCellImage(loc) == AVOID_IMG){
+			System.out.println("A");
+
+			this.grid.setCellImage(loc,null);
+
+			lives--;
+			
+			//Randomly selects a collision sound and plays it
+			radio.playSound(COLLIDE[rand.nextInt(3)]);
+			
+			//Cases where it's moving down
+			this.grid.setCellImage(loc,null);
+			if (lives == 2) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG1);
+			else if (lives == 1) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG2);
+			else if (lives == 0) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG3);
+
+		}
+		else if(this.grid.getCellImage(loc) == GET_IMG){
+			System.out.println("G");
+			
+			radio.playSound("get.wav");
+			this.grid.setCellImage(loc,null);
+			if(lives == 3) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG);
+			if (lives == 2) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG1);
+			else if (lives == 1) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG2);
+			else if (lives == 0) this.grid.setCellImage(new Location(loc.getRow()+1,loc.getCol()),USER_IMG3);
+			score++;
+		}
+	}
+	
+	// return the "score" of the game 
+	public int getScore() {
+		return score;   
+	}
+	
+	
+	// update the title bar of the game window 
+	public void updateTitle() {
+		grid.setTitle("Score: "+score+" Lives: "+lives);
+	}
+	
+	
+   // return true if the game is finished, false otherwise
+	//      used by play() to terminate the main game loop 
+	public boolean isGameOver() {
+		return(lives == 0 || score == 10);
+	}
+	
+	public static void run(String[] args) {
+		if (DEMO) {       // reference game: 
+			//   - play and observe first the mechanism of the demo 
+			//     to understand the basic game 
+			//   - go back to the demo anytime you don't know what the
+			//     next step to implement and to test are. you should always be 
+			//     clear and concrete about the ~5 lines you are trying to code and
+			//     how to validate them
+			//         figure out according to the game play 
+			//         (the sequence of display and action) how the functionality
+			//         you are implementing next is supposed to operate
+			
+			// It's critical to have a plan for each piece of code: follow, understand
+			// and study the assignment description details; and explore the basic game. 
+			// You should always know what you are doing (your current small goal) 
+			// before implementing that piece or talk to us. 
+			
+			System.out.println("Running the demo: DEMO=" + DEMO);
+			//constructor for client to adjust the game window size 
+			//TRY different values
+			DemoGame game = new DemoGame(5, 10, 0);
+			//default constructor   (4 by 10)
+			// DemoGame game = new DemoGame();
+			game.play();
+			
+		} else {
+			System.out.println("Running student game: DEMO=" + DEMO);
+			// !DEMO   -> your code should execute those lines when you are
+			// implementing your game
+			LeoAscenziGame game;
+			
+			if(args.length==1){
+				game = new LeoAscenziGame(args[0]);
+			}
+			else{
+				game = new LeoAscenziGame(Integer.parseInt(args[0]),Integer.parseInt(args[1]),Integer.parseInt(args[2]));
+			}
+			
+			//test 2: with constructor specifying grid size  
+			//IT SHOULD ALSO WORK
+			//ScrollingGame game = new ScrollingGame(10, 20, 4);
+			
+			game.play();
+		}
+	}
+	
+	public static void main(String[] args) {
+		run(args);
+	}
+}
