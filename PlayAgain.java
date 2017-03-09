@@ -48,9 +48,22 @@ public class PlayAgain extends JFrame{
 		
 		main.add(scorePanel);
 		main.add(buttonPanel);
-		
-		scoreLabel = new JLabel("Previous Score: "+lastScore);
-		scorePanel.add(scoreLabel);
+		if(lastScore >= 9){
+			scoreLabel = new JLabel("Epic Job! Previous Score: "+lastScore);
+			scorePanel.add(scoreLabel);
+		}
+		else if(lastScore >= 5){
+			scoreLabel = new JLabel("You did well! Previous Score: "+lastScore);
+			scorePanel.add(scoreLabel);
+		}
+		else if(lastScore >= 2){
+			scoreLabel = new JLabel("Maybe you're not a videogamer... Previous Score: "+lastScore);
+			scorePanel.add(scoreLabel);
+		}
+		else{
+			scoreLabel = new JLabel("How are you so bad. Previous Score: "+lastScore);
+			scorePanel.add(scoreLabel);
+		}
 		
 		//Creates the buttons
 		playAgainButton = new JButton("Play Again?");
